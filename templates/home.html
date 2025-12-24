@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="home">
+    <section class="profile">
+        <img src="{{ site.profile_image }}" alt="{{ site.author }}" class="profile-image">
+        <div class="profile-content prose">
+            {{ content | safe }}
+        </div>
+    </section>
+
+    {% if latest_posts %}
+    <section class="section">
+        <h2>Latest Posts</h2>
+        <div class="post-list">
+            {% for post in latest_posts %}
+            <article class="post-card">
+                <a href="{{ post.url }}">
+                    <h3>{{ post.title }}</h3>
+                    <p class="post-meta">{{ post.date.strftime('%B %d, %Y') }}</p>
+                    {% if post.description %}
+                    <p class="post-description">{{ post.description }}</p>
+                    {% endif %}
+                </a>
+            </article>
+            {% endfor %}
+        </div>
+        <a href="/blog/" class="view-all">View all posts &rarr;</a>
+    </section>
+    {% endif %}
+
+    {% if selected_publications %}
+    <section class="section">
+        <h2>Selected Publications</h2>
+        <div class="pub-list">
+            {% for pub in selected_publications %}
+            <article class="pub-card selected">
+                {% if pub.image %}
+                <div class="pub-image">
+                    <img src="/assets/img/publications/{{ pub.image }}" alt="{{ pub.title }}">
+                </div>
+                {% endif %}
+                <div class="pub-info">
+                    <h3>{{ pub.title }}</h3>
+                    <p class="pub-authors">{{ pub.authors }}</p>
+                    <p class="pub-venue">{{ pub.venue }}{% if pub.venue and pub.year %}, {% endif %}{{ pub.year }}</p>
+                    {% if pub.abstract %}
+                    <details class="pub-abstract">
+                        <summary>Abstract</summary>
+                        <p>{{ pub.abstract }}</p>
+                    </details>
+                    {% endif %}
+                    {% if pub.url %}
+                    <a href="{{ pub.url }}" class="pub-link" target="_blank" rel="noopener">View paper &rarr;</a>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        <a href="/publications/" class="view-all">View all publications &rarr;</a>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<article class="post-layout">
+    <aside class="toc-sidebar">
+        <nav class="toc">
+            <h4>Contents</h4>
+            {{ post.toc | safe }}
+        </nav>
+    </aside>
+    <div class="post-content">
+        <header class="post-header">
+            <h1>{{ post.title }}</h1>
+            <p class="post-meta">{{ post.date.strftime('%B %d, %Y') }}</p>
+        </header>
+        <div class="prose">
+            {{ post.content | safe }}
+        </div>
+        {% if post.references_html %}
+        {{ post.references_html | safe }}
+        {% endif %}
+        <footer class="post-footer">
+            <a href="/blog/" class="back-link">&larr; Back to blog</a>
+        </footer>
+    </div>
+</article>
+{% endblock %}
