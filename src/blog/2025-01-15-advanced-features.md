@@ -1,3 +1,7 @@
+---
+publish: true
+---
+
 # Advanced Features Demo
 
 This post showcases more advanced capabilities of the blog system.

@@ -1,3 +1,7 @@
+---
+publish: true
+---
+
 # Customizing Your Blog
 
 This guide will help you customize various aspects of your blog to make it truly yours.
@@ -28,8 +32,8 @@ SITE = {
 │   └── publications.md   # Publications page
 ├── templates/             # HTML templates
 ├── static/               # CSS and JavaScript
-├── bibliography/         # BibTeX files for citations
-└── build.py             # Build script
+├── bibliography/         # BibTeX file for citations and publications
+└── src/lectern/build.py # Build command module
 ```
 
 ## Creating New Posts
@@ -38,15 +42,13 @@ To create a new blog post:
 
 1. Create a new `.md` file in `src/blog/`
 2. Use the naming convention: `YYYY-MM-DD-post-title.md`
-3. Add frontmatter with metadata:
+3. Add frontmatter to opt the post into publishing:
 
 ```yaml
 ---
-title: "Your Post Title"
-date: 2025-01-01 10:00:00+01:00
-description: Brief description for SEO and previews
-tags: tag1 tag2 tag3
-categories: category-name
+publish: true
+title: Your Post Title
+description: Brief description for previews
 ---
 ```
 
@@ -78,9 +80,9 @@ Templates are located in the `templates/` directory:
 
 ## Tips for Best Results
 
-1. **Keep posts organized**: Use consistent naming and dating
+1. **Keep posts organized**: Use consistent filenames and dating
 2. **Optimize images**: Compress images before adding them
-3. **Test locally**: Run `python build.py` to test before deploying
+3. **Test locally**: Run `uv run python -m lectern.build build` before deploying
 4. **Use version control**: Commit regularly to track changes
 5. **Add alt text**: Make your content accessible with image descriptions
 
@@ -89,10 +91,10 @@ Templates are located in the `templates/` directory:
 Generate the static site with:
 
 ```bash
-python build.py
+uv run python -m lectern.build build
 ```
 
-The output will be in the build directory, ready to deploy to any static hosting service.
+The output will be in the `dist/` directory, ready to deploy to any static hosting service.
 
 ## Deployment Options
 
@@ -103,4 +105,4 @@ This static blog can be deployed to:
 - Vercel
 - Any static hosting service
 
-Just point your hosting provider to the build output directory!
+Just point your hosting provider to the `dist/` directory.

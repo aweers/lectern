@@ -42,7 +42,7 @@
                 {% endif %}
                 <div class="pub-info">
                     <h3>{{ pub.title }}</h3>
-                    <p class="pub-authors">{{ pub.authors }}</p>
+                    <p class="pub-authors">{{ pub.authors | safe }}</p>
                     <p class="pub-venue">{{ pub.venue }}{% if pub.venue and pub.year %}, {% endif %}{{ pub.year }}</p>
                     {% if pub.abstract %}
                     <details class="pub-abstract">

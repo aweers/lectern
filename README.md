@@ -34,13 +34,13 @@ uv sync
 Build the site:
 
 ```bash
-uv run build.py build
+uv run python -m lectern.build build
 ```
 
 Clean build artifacts:
 
 ```bash
-uv run build.py clean
+uv run python -m lectern.build clean
 ```
 
 Serve locally:
@@ -65,9 +65,8 @@ lectern/
 │   └── publications.md    # Publications page content
 ├── templates/             # Jinja2 HTML templates
 ├── static/                # Static assets (CSS, JS)
-├── bibliography/          # BibTeX files
-│   └── references.bib    # Citation references
-├── build.py              # Build script entrypoint
+├── bibliography/          # BibTeX file for citations and publications
+│   └── references.bib
 └── dist/                 # Generated site (gitignored)
 ```
 
@@ -78,6 +77,12 @@ Create a new Markdown file in `src/blog/` with the naming convention: `YYYY-MM-D
 Example:
 
 ```markdown
+---
+publish: true
+title: My Blog Post Title
+description: Short summary shown on blog index pages
+---
+
 # My Blog Post Title
 
 This is the introduction paragraph.
@@ -107,6 +112,13 @@ def hello_world():
 \```
 ```
 
+Notes:
+
+- Posts are discovered from files named `YYYY-MM-DD-slug.md`
+- The date is taken from the filename, not frontmatter
+- `publish` defaults to `false` if omitted
+- Only `publish`, `title`, and `description` are supported frontmatter fields
+
 ## Configuration
 
 Edit `src/lectern/config.py` to customize your site:
@@ -122,7 +134,7 @@ SITE = {
 
 ## Managing Publications
 
-Add your publications to `bibliography/references.bib`:
+Add your citations and publications to `bibliography/references.bib`:
 
 ```bibtex
 @article{yourkey2025,

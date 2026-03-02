@@ -26,6 +26,17 @@ DIST = ROOT / "dist"
 _bibliography_cache = None
 
 
+def is_published(value) -> bool:
+    """Normalize the publish frontmatter flag."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "1", "on"}
+    if isinstance(value, int):
+        return value != 0
+    return False
+
+
 def load_bibliography() -> dict:
     """Load and cache the bibliography from references.bib."""
     global _bibliography_cache
@@ -109,7 +120,7 @@ def generate_references_html(citations: list) -> str:
 
         html.append(f'  <li id="ref-{key}">')
         if url:
-            html.append(f'    <a href="{url}" target="_blank">{title}</a>')
+            html.append(f'    <a href="{url}" target="_blank" rel="noopener">{title}</a>')
         else:
             html.append(f"    {title}")
         html.append(f'    <br><span class="ref-authors">{authors}</span>')
@@ -234,6 +245,10 @@ def load_posts() -> list:
 
     for filepath in blog_dir.glob("*.md"):
         post = frontmatter.load(filepath)
+        if not is_published(post.get("publish")):
+            click.echo(f"  Skipping {filepath.name} (publish is false)")
+            continue
+
         content = post.content
         meta = extract_metadata(filepath, content)
 
@@ -277,7 +292,7 @@ def clean_latex(text: str) -> str:
 
 def load_publications() -> list:
     """Load publications from BibTeX file."""
-    bib_file = BIBLIOGRAPHY / "papers.bib"
+    bib_file = BIBLIOGRAPHY / "references.bib"
     if not bib_file.exists():
         return []
 

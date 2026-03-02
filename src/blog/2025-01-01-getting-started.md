@@ -1,3 +1,7 @@
+---
+publish: true
+---
+
 # Welcome to Your Blog!
 
 This is an example blog post demonstrating the basic features of this markdown-based blog system.
