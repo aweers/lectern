@@ -366,6 +366,7 @@ def build_site():
     env = Environment(loader=FileSystemLoader(TEMPLATES))
     env.globals["site"] = SITE
     env.globals["nav"] = NAV
+    env.globals["current_year"] = datetime.now().year
 
     if DIST.exists():
         shutil.rmtree(DIST)
