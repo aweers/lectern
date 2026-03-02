@@ -26,8 +26,8 @@ DIST = ROOT / "dist"
 _bibliography_cache = None
 
 
-def is_published(value) -> bool:
-    """Normalize the publish frontmatter flag."""
+def is_truthy_flag(value) -> bool:
+    """Normalize boolean-like frontmatter and BibTeX flags."""
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
@@ -245,7 +245,7 @@ def load_posts() -> list:
 
     for filepath in blog_dir.glob("*.md"):
         post = frontmatter.load(filepath)
-        if not is_published(post.get("publish")):
+        if not is_truthy_flag(post.get("publish")):
             click.echo(f"  Skipping {filepath.name} (publish is false)")
             continue
 
@@ -301,6 +301,8 @@ def load_publications() -> list:
 
     for key, entry in bib.entries.items():
         fields = entry.fields
+        if not is_truthy_flag(fields.get("publication", "")):
+            continue
 
         authors_list = []
         for person in entry.persons.get("author", []):
@@ -328,12 +330,27 @@ def load_publications() -> list:
                 ),
                 "abstract": fields.get("abstract", ""),
                 "url": fields.get("html", fields.get("url", "")),
-                "selected": fields.get("selected", "").lower() == "true",
+                "selected": is_truthy_flag(fields.get("selected", "")),
                 "image": fields.get("image", ""),
             }
         )
 
-    return sorted(pubs, key=lambda p: p["year"], reverse=True)
+    return sorted(pubs, key=lambda p: (p["year"], p["title"]), reverse=True)
+
+
+def group_publications_by_year(publications: list) -> list:
+    """Group publications into reverse-chronological year sections."""
+    sections = []
+
+    for pub in publications:
+        year = pub["year"] or "Other"
+        if sections and sections[-1]["year"] == year:
+            sections[-1]["publications"].append(pub)
+            continue
+
+        sections.append({"year": year, "publications": [pub]})
+
+    return sections
 
 
 def generate_pygments_css() -> str:
@@ -399,7 +416,7 @@ def build_site():
     html = template.render(
         title="Publications",
         content=pub_content,
-        publications=publications,
+        publication_sections=group_publications_by_year(publications),
     )
     (DIST / "publications" / "index.html").write_text(html)
     click.echo("  Built: publications/index.html")

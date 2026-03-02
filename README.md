@@ -143,10 +143,17 @@ Add your citations and publications to `bibliography/references.bib`:
   journal={Conference/Journal Name},
   year={2025},
   url={https://link-to-paper.com},
+  publication={true},
   selected={true},
   image={publications/yourkey2025.png}
 }
 ```
+
+Use these BibTeX flags:
+
+- `publication={true}` to show an entry on `/publications/`
+- `selected={true}` to feature a publication on the homepage
+- entries without `publication={true}` can still be cited in blog posts but will not appear on the publications page
 
 ## Acknowledgments
 
