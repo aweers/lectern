@@ -1,13 +1,14 @@
 const themeToggle = document.getElementById('theme-toggle');
 const html = document.documentElement;
 const SCROLL_OFFSET = 80;
+const CITATION_BACKLINK_SCROLL_OFFSET = 110;
 
-function scrollToAnchor(targetId) {
+function scrollToAnchor(targetId, offset = SCROLL_OFFSET) {
     const targetElement = document.getElementById(targetId);
     if (!targetElement) return;
 
     const elementPosition = targetElement.getBoundingClientRect().top;
-    const offsetPosition = elementPosition + window.pageYOffset - SCROLL_OFFSET;
+    const offsetPosition = elementPosition + window.pageYOffset - offset;
 
     window.scrollTo({
         top: offsetPosition,
@@ -75,6 +76,29 @@ if (footnoteLinks.length) {
 
             e.preventDefault();
             scrollToAnchor(targetId);
+            history.replaceState(null, '', target);
+        });
+    });
+}
+
+const citationLinks = document.querySelectorAll(
+    '.citation a[href^="#ref-"], .ref-backlink[href^="#cite-"]'
+);
+
+if (citationLinks.length) {
+    citationLinks.forEach((link) => {
+        link.addEventListener('click', (e) => {
+            const target = link.getAttribute('href');
+            if (!target || !target.startsWith('#')) return;
+
+            const targetId = target.slice(1);
+            if (!targetId) return;
+
+            e.preventDefault();
+            const offset = link.classList.contains('ref-backlink')
+                ? CITATION_BACKLINK_SCROLL_OFFSET
+                : SCROLL_OFFSET;
+            scrollToAnchor(targetId, offset);
             history.replaceState(null, '', target);
         });
     });

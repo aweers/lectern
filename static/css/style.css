@@ -692,6 +692,10 @@ main {
     padding: 0 0.1em;
 }
 
+.citation a[id] {
+    scroll-margin-top: 110px;
+}
+
 .citation a:hover {
     text-decoration: underline;
 }
