@@ -93,4 +93,4 @@ Use horizontal rules to separate sections:
 
 ## Conclusion
 
-These advanced features allow you to create rich, technical content with ease. Experiment with different combinations to find what works best for your content!
+These advanced features allow you to create rich, technical content with ease. **Bold highlights can now use a theme-aware accent color**\footnote[Try toggling the theme to compare bold contrast in light and dark mode.]. Experiment with different combinations to find what works best for your content!

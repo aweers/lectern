@@ -18,6 +18,11 @@ SITE = {
     "author": "Your Name",
     "profile_image": "/assets/img/profile.webp",
 }
+
+MARKDOWN_BOLD_COLORS = {
+    "light": "#1a1a1a",
+    "dark": "#93c5fd",
+}
 ```
 
 ## Directory Structure
@@ -56,12 +61,19 @@ description: Brief description for previews
 Edit `static/css/style.css` to customize the appearance:
 
 ```css
-/* Example: Change primary color */
+/* Example: Tune bold accent and link colors */
 :root {
-    --primary-color: #your-color-here;
+    --markdown-strong-color: #1a1a1a;
+    --accent: #2563eb;
     --font-family: 'Your-Font', sans-serif;
 }
+
+[data-theme="dark"] {
+    --markdown-strong-color: #93c5fd;
+}
 ```
+
+You can use **accented bold callouts** in your writing\footnote[This is rendered using `\footnote[...]` and displayed as a sidenote on larger screens.], which is especially useful for key terms or warnings.
 
 ## Adding Interactive Elements
 

@@ -10,7 +10,7 @@
         <article class="post-card">
             <a href="{{ post.url }}">
                 <h2>{{ post.title }}</h2>
-                <p class="post-meta">{{ post.date.strftime('%B %d, %Y') }}</p>
+                <p class="post-meta">{{ post.date.strftime('%B %d, %Y') }} &middot; {{ post.reading_time_minutes }} min read</p>
                 {% if post.description %}
                 <p class="post-description">{{ post.description }}</p>
                 {% endif %}

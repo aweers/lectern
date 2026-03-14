@@ -21,6 +21,8 @@ This static blog generator supports a variety of features:
 
 You can write in **bold**, *italics*, or ***both***. You can also create lists:
 
+This line demonstrates the new styling: **accented bold text** should stand out in both light and dark mode\footnote[You can tune this color in `MARKDOWN_BOLD_COLORS` inside `src/lectern/config.py`.].
+
 1. First item
 2. Second item
 3. Third item

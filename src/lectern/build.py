@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Static site generator for markdown blog."""
 
+import html
 import re
 import shutil
 from datetime import datetime
@@ -404,6 +405,19 @@ def parse_markdown(content: str, process_cites: bool = False) -> dict:
     return result
 
 
+def estimate_reading_time_minutes(content_html: str, words_per_minute: int = 200) -> int:
+    """Estimate reading time from HTML content while excluding code blocks."""
+    # Drop code sections before counting readable words.
+    prose_only = re.sub(r"<pre\b[^>]*>.*?</pre>", " ", content_html, flags=re.DOTALL)
+    prose_only = re.sub(r"<code\b[^>]*>.*?</code>", " ", prose_only, flags=re.DOTALL)
+    prose_only = re.sub(r"<[^>]+>", " ", prose_only)
+    prose_only = html.unescape(prose_only)
+
+    words = re.findall(r"\b[\w'-]+\b", prose_only)
+    word_count = len(words)
+    return max(1, (word_count + words_per_minute - 1) // words_per_minute)
+
+
 def extract_metadata(filepath: Path, content: str) -> dict:
     """Extract title, date, slug from file."""
     title_match = re.search(r"^#\s+(.+)$", content, re.MULTILINE)
@@ -465,6 +479,7 @@ def load_posts() -> list:
 
         parsed = parse_markdown(content, process_cites=True)
         meta["content"] = parsed["html"]
+        meta["reading_time_minutes"] = estimate_reading_time_minutes(meta["content"])
         meta["toc"] = parsed["toc"]
         meta["citations"] = parsed.get("citations", [])
         meta["references_html"] = parsed.get("references_html", "")
