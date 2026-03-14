@@ -1,5 +1,19 @@
 const themeToggle = document.getElementById('theme-toggle');
 const html = document.documentElement;
+const SCROLL_OFFSET = 80;
+
+function scrollToAnchor(targetId) {
+    const targetElement = document.getElementById(targetId);
+    if (!targetElement) return;
+
+    const elementPosition = targetElement.getBoundingClientRect().top;
+    const offsetPosition = elementPosition + window.pageYOffset - SCROLL_OFFSET;
+
+    window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+    });
+}
 
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
@@ -40,17 +54,28 @@ if (tocLinks.length && headings.length) {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetId = link.getAttribute('href').slice(1);
-            const targetElement = document.getElementById(targetId);
-            if (targetElement) {
-                const offset = 80;
-                const elementPosition = targetElement.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - offset;
-                
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
+            scrollToAnchor(targetId);
+            history.replaceState(null, '', `#${targetId}`);
+        });
+    });
+}
+
+const footnoteLinks = document.querySelectorAll(
+    '.footnote-ref a[href^="#fn-"], .footnote-backlink[href^="#fnref-"]'
+);
+
+if (footnoteLinks.length) {
+    footnoteLinks.forEach((link) => {
+        link.addEventListener('click', (e) => {
+            const target = link.getAttribute('href');
+            if (!target || !target.startsWith('#')) return;
+
+            const targetId = target.slice(1);
+            if (!targetId) return;
+
+            e.preventDefault();
+            scrollToAnchor(targetId);
+            history.replaceState(null, '', target);
         });
     });
 }

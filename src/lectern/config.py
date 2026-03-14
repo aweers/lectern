@@ -16,3 +16,10 @@ NAV = [
 
 # Number of latest posts to show on homepage
 LATEST_POSTS_COUNT = 3
+
+# Markdown <strong> styling by theme.
+# These values are injected into CSS variables at build time.
+MARKDOWN_BOLD_COLORS = {
+    "light": "#1a1a1a",
+    "dark": "#93c5fd",
+}

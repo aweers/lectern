@@ -6,6 +6,7 @@ A lightweight static site generator for academic blogs and portfolios. Built wit
 
 - **Markdown-based content** - Write blog posts in Markdown with frontmatter support
 - **Academic citations** - Built-in BibTeX citation processing with `[@key]` syntax
+- **Sidenotes** - Inline `\footnote[...]` syntax with auto-numbered right-side notes
 - **Math equations** - Full LaTeX math support with `$...$` (inline) and `$$...$$` (display)
 - **Syntax highlighting** - Code blocks with Pygments (GitHub dark theme)
 - **Table of contents** - Automatic TOC generation for blog posts
@@ -104,6 +105,16 @@ $$
 
 Reference a paper with [@key] where `key` matches an entry in `bibliography/references.bib`.
 
+### Footnotes
+
+Use `\footnote[...]` to create an auto-numbered sidenote in blog content.
+
+Example:
+
+```markdown
+Transformer models improved sequence modeling\footnote[See *Attention Is All You Need* for details].
+```
+
 ### Code Blocks
 
 \```python
@@ -129,6 +140,11 @@ SITE = {
     "description": "Your description",
     "url": "https://yoursite.com",
     "author": "Your Name",
+}
+
+MARKDOWN_BOLD_COLORS = {
+    "light": "#1a1a1a",
+    "dark": "#93c5fd",
 }
 ```
 

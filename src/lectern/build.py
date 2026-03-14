@@ -14,7 +14,7 @@ from markdown.extensions.toc import TocExtension
 from pybtex.database import parse_file as parse_bib
 from pygments.formatters import HtmlFormatter
 
-from lectern.config import LATEST_POSTS_COUNT, NAV, SITE
+from lectern.config import LATEST_POSTS_COUNT, MARKDOWN_BOLD_COLORS, NAV, SITE
 
 ROOT = Path(__file__).parent.parent.parent
 SRC = ROOT / "src"
@@ -139,6 +139,207 @@ def generate_references_html(citations: list) -> str:
     return "\n".join(html)
 
 
+def find_code_regions(content: str) -> list[tuple[int, int]]:
+    """Find ranges for fenced and inline markdown code regions."""
+    ranges = []
+    length = len(content)
+    i = 0
+
+    in_fence = False
+    fence_char = ""
+    fence_len = 0
+    fence_start = 0
+
+    inline_ticks = 0
+    inline_start = 0
+
+    def line_end(pos: int) -> int:
+        end = content.find("\n", pos)
+        return length if end == -1 else end
+
+    while i < length:
+        is_line_start = i == 0 or content[i - 1] == "\n"
+
+        if in_fence:
+            if is_line_start:
+                end = line_end(i)
+                line = content[i:end]
+                marker_match = re.match(r" {0,3}((`{3,}|~{3,}))(.*)$", line)
+                if marker_match:
+                    marker = marker_match.group(1)
+                    marker_char = marker[0]
+                    rest = marker_match.group(3)
+                    if (
+                        marker_char == fence_char
+                        and len(marker) >= fence_len
+                        and rest.strip() == ""
+                    ):
+                        close_end = end + 1 if end < length else end
+                        ranges.append((fence_start, close_end))
+                        in_fence = False
+                        i = close_end
+                        continue
+
+            i += 1
+            continue
+
+        if is_line_start and inline_ticks == 0:
+            end = line_end(i)
+            line = content[i:end]
+            marker_match = re.match(r" {0,3}((`{3,}|~{3,}))(.*)$", line)
+            if marker_match:
+                marker = marker_match.group(1)
+                in_fence = True
+                fence_char = marker[0]
+                fence_len = len(marker)
+                fence_start = i
+                i = end + 1 if end < length else end
+                continue
+
+        if content[i] == "`" and not in_fence:
+            tick_count = 1
+            while i + tick_count < length and content[i + tick_count] == "`":
+                tick_count += 1
+
+            if inline_ticks == 0:
+                inline_ticks = tick_count
+                inline_start = i
+                i += tick_count
+                continue
+
+            if tick_count == inline_ticks:
+                ranges.append((inline_start, i + tick_count))
+                inline_ticks = 0
+                i += tick_count
+                continue
+
+            i += tick_count
+            continue
+
+        i += 1
+
+    if in_fence:
+        ranges.append((fence_start, length))
+
+    ranges.sort()
+    return ranges
+
+
+def process_footnotes(content: str) -> tuple[str, list]:
+    """Replace \\footnote[...] syntax with placeholders."""
+    footnotes = []
+    output = []
+    i = 0
+    length = len(content)
+    command = "\\footnote"
+    code_regions = find_code_regions(content)
+    code_region_idx = 0
+
+    while i < length:
+        while (
+            code_region_idx < len(code_regions)
+            and i >= code_regions[code_region_idx][1]
+        ):
+            code_region_idx += 1
+
+        if (
+            code_region_idx < len(code_regions)
+            and code_regions[code_region_idx][0] <= i < code_regions[code_region_idx][1]
+        ):
+            start, end = code_regions[code_region_idx]
+            output.append(content[start:end])
+            i = end
+            continue
+
+        is_command = content.startswith(command, i)
+        is_escaped = i > 0 and content[i - 1] == "\\"
+        if not is_command or is_escaped:
+            output.append(content[i])
+            i += 1
+            continue
+
+        j = i + len(command)
+        while j < length and content[j].isspace():
+            j += 1
+
+        if j >= length or content[j] != "[":
+            output.append(content[i])
+            i += 1
+            continue
+
+        k = j + 1
+        depth = 1
+        note_chars = []
+
+        while k < length:
+            ch = content[k]
+
+            if ch == "\\" and k + 1 < length and content[k + 1] == "]":
+                note_chars.append("]")
+                k += 2
+                continue
+
+            if ch == "[":
+                depth += 1
+                note_chars.append(ch)
+                k += 1
+                continue
+
+            if ch == "]":
+                depth -= 1
+                if depth == 0:
+                    break
+                note_chars.append(ch)
+                k += 1
+                continue
+
+            note_chars.append(ch)
+            k += 1
+
+        if depth != 0:
+            output.append(content[i:])
+            break
+
+        footnotes.append("".join(note_chars).strip())
+        output.append(f"<!--FOOTNOTE_PLACEHOLDER_{len(footnotes) - 1}_END-->")
+        i = k + 1
+
+    return "".join(output), footnotes
+
+
+def render_inline_markdown(content: str) -> str:
+    """Render inline markdown without wrapping paragraph tags."""
+    html = markdown.markdown(content, extensions=["tables"])
+    html = html.replace("</p>\n<p>", "<br><br>")
+    html = html.replace("</p><p>", "<br><br>")
+    html = re.sub(r"^<p>", "", html)
+    html = re.sub(r"</p>$", "", html)
+    return html
+
+
+def restore_footnotes(html: str, footnotes: list) -> str:
+    """Replace footnote placeholders with superscript markers and sidenotes."""
+    for i, note in enumerate(footnotes):
+        number = i + 1
+        ref_id = f"fnref-{number}"
+        note_id = f"fn-{number}"
+        note_html = render_inline_markdown(note) if note else ""
+        placeholder = f"<!--FOOTNOTE_PLACEHOLDER_{i}_END-->"
+        replacement = (
+            f'<sup class="footnote-ref" id="{ref_id}">'
+            f'<a href="#{note_id}" aria-describedby="{note_id}">[{number}]</a>'
+            "</sup>"
+            f'<span class="footnote-sidenote" id="{note_id}">'
+            f'<span class="footnote-sidenote-number">[{number}]</span> '
+            f'<span class="footnote-sidenote-content">{note_html}</span> '
+            f'<a href="#{ref_id}" class="footnote-backlink" '
+            'aria-label="Back to reference">↩</a>'
+            "</span>"
+        )
+        html = html.replace(placeholder, replacement)
+    return html
+
+
 def protect_math(content: str) -> tuple[str, list]:
     """Protect math blocks from markdown processing."""
     placeholders = []
@@ -166,6 +367,8 @@ def parse_markdown(content: str, process_cites: bool = False) -> dict:
     """Convert markdown to HTML with extensions."""
     citations = []
     references_html = ""
+    content, footnotes = process_footnotes(content)
+
     if process_cites:
         content, citations = process_citations(content)
         references_html = generate_references_html(citations)
@@ -191,6 +394,7 @@ def parse_markdown(content: str, process_cites: bool = False) -> dict:
 
     html = restore_math(html, math_placeholders)
     toc = restore_math(toc, math_placeholders)
+    html = restore_footnotes(html, footnotes)
 
     result = {"html": html, "toc": toc}
     if process_cites:
@@ -359,6 +563,21 @@ def generate_pygments_css() -> str:
     return formatter.get_style_defs(".highlight")
 
 
+def generate_theme_overrides_css() -> str:
+    """Generate CSS overrides based on site configuration."""
+    light_color = str(MARKDOWN_BOLD_COLORS.get("light", "var(--text)")).strip()
+    dark_color = str(MARKDOWN_BOLD_COLORS.get("dark", "var(--accent)")).strip()
+    return (
+        "\n\n/* Lectern config overrides */\n"
+        ":root {\n"
+        f"    --markdown-strong-color: {light_color};\n"
+        "}\n\n"
+        '[data-theme="dark"] {\n'
+        f"    --markdown-strong-color: {dark_color};\n"
+        "}\n"
+    )
+
+
 def build_site():
     """Build the static site."""
     click.echo("Building site...")
@@ -424,9 +643,11 @@ def build_site():
 
     shutil.copytree(STATIC, DIST / "static")
 
+    theme_overrides_css = generate_theme_overrides_css()
     pygments_css = generate_pygments_css()
     css_file = DIST / "static" / "css" / "style.css"
     with open(css_file, "a") as f:
+        f.write(theme_overrides_css)
         f.write("\n\n/* Pygments github-dark syntax highlighting */\n")
         f.write(pygments_css)
     click.echo("  Built: static assets + syntax highlighting CSS")

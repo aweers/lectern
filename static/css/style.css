@@ -8,6 +8,9 @@
     --accent-hover: #1d4ed8;
     --border: #e5e7eb;
     --code-bg: #f6f8fa;
+    --markdown-strong-color: var(--text);
+    --sidenote-width: 240px;
+    --sidenote-gap: 1.75rem;
     --max-width: 900px;
     --content-width: 650px;
     --radius: 6px;
@@ -23,6 +26,7 @@
     --accent-hover: #93c5fd;
     --border: #2d2d2d;
     --code-bg: #1e1e1e;
+    --markdown-strong-color: var(--accent);
 }
 
 *, *::before, *::after {
@@ -412,6 +416,11 @@ main {
     color: var(--accent);
 }
 
+.prose strong {
+    color: var(--markdown-strong-color);
+    font-weight: 700;
+}
+
 .prose img {
     max-width: 100%;
     height: auto;
@@ -687,6 +696,58 @@ main {
     text-decoration: underline;
 }
 
+.footnote-ref {
+    font-size: 0.75em;
+    vertical-align: super;
+    line-height: 0;
+    scroll-margin-top: 80px;
+}
+
+.footnote-ref a {
+    color: var(--accent);
+    text-decoration: none;
+    padding: 0 0.1em;
+}
+
+.footnote-ref a:hover {
+    text-decoration: underline;
+}
+
+.footnote-sidenote {
+    float: right;
+    clear: right;
+    width: var(--sidenote-width);
+    margin-right: calc(-1 * (var(--sidenote-width) + var(--sidenote-gap)));
+    margin-left: 1.25rem;
+    margin-bottom: 0.75rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.45;
+    scroll-margin-top: 80px;
+}
+
+.footnote-sidenote-number {
+    color: var(--text);
+    font-weight: 600;
+    margin-right: 0.25rem;
+}
+
+.footnote-sidenote-content a {
+    color: var(--accent);
+}
+
+.footnote-backlink {
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-left: 0.35rem;
+}
+
+.footnote-backlink:hover {
+    color: var(--accent);
+}
+
 .references {
     margin-top: 3rem;
     padding-top: 2rem;
@@ -764,6 +825,14 @@ main {
         padding: 1rem;
         background: var(--bg-secondary);
         border-radius: var(--radius);
+    }
+
+    .footnote-sidenote {
+        float: none;
+        width: auto;
+        margin: 0.4rem 0 1rem 0.25rem;
+        padding-left: 0.75rem;
+        border-left-width: 2px;
     }
 }
 
