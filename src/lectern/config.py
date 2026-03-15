@@ -6,6 +6,8 @@ SITE = {
     "url": "https://yourdomain.com",
     "author": "Your Name",
     "profile_image": "/assets/img/profile.webp",
+    # Optional emoji favicon (e.g. "📝"). Set to None or "" to disable.
+    "favicon_emoji": None,
 }
 
 NAV = [

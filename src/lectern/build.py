@@ -6,6 +6,8 @@ import re
 import shutil
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
+from urllib.parse import quote
 
 import click
 import frontmatter
@@ -224,6 +226,31 @@ def find_code_regions(content: str) -> list[tuple[int, int]]:
 
     ranges.sort()
     return ranges
+
+
+def build_emoji_favicon_href(value) -> Optional[str]:
+    """Build a SVG data: URL favicon from an emoji string.
+
+    Returns None when the value is missing/empty.
+    """
+    if value is None:
+        return None
+
+    emoji = str(value).strip()
+    if not emoji:
+        return None
+
+    emoji = html.escape(emoji)
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" '
+        'viewBox="0 0 100 100">'
+        '<text x="50" y="50" font-size="80" text-anchor="middle" dominant-baseline="middle" '
+        'font-family="system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji">'
+        f"{emoji}"
+        "</text>"
+        "</svg>"
+    )
+    return "data:image/svg+xml;charset=utf-8," + quote(svg)
 
 
 def process_footnotes(content: str) -> tuple[str, list]:
@@ -601,6 +628,7 @@ def build_site():
     env.globals["site"] = SITE
     env.globals["nav"] = NAV
     env.globals["current_year"] = datetime.now().year
+    env.globals["favicon_href"] = build_emoji_favicon_href(SITE.get("favicon_emoji"))
 
     if DIST.exists():
         shutil.rmtree(DIST)

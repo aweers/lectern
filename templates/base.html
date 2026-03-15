@@ -6,6 +6,9 @@
     <title>{{ title }} | {{ site.title }}</title>
     <meta name="description" content="{{ site.description }}">
     <meta name="author" content="{{ site.author }}">
+    {% if favicon_href %}
+    <link rel="icon" href="{{ favicon_href }}" type="image/svg+xml" sizes="any">
+    {% endif %}
     <link rel="stylesheet" href="/static/css/style.css">
     <script>
         const theme = localStorage.getItem('theme') || 'light';

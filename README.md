@@ -140,6 +140,7 @@ SITE = {
     "description": "Your description",
     "url": "https://yoursite.com",
     "author": "Your Name",
+    "favicon_emoji": "📝",
 }
 
 MARKDOWN_BOLD_COLORS = {

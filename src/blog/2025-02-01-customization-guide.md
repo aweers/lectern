@@ -17,6 +17,7 @@ SITE = {
     "url": "https://yourdomain.com",
     "author": "Your Name",
     "profile_image": "/assets/img/profile.webp",
+    "favicon_emoji": "📝",
 }
 
 MARKDOWN_BOLD_COLORS = {
