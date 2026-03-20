@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Static site generator for markdown blog."""
 
+from __future__ import annotations
+
 import html
+import os
 import re
 import shutil
+import threading
+import time
 from datetime import datetime
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -27,6 +34,11 @@ BIBLIOGRAPHY = ROOT / "bibliography"
 DIST = ROOT / "dist"
 
 _bibliography_cache = None
+
+
+def reset_caches() -> None:
+    global _bibliography_cache
+    _bibliography_cache = None
 
 
 def is_truthy_flag(value) -> bool:
@@ -511,6 +523,13 @@ def load_posts() -> list:
         meta["citations"] = parsed.get("citations", [])
         meta["references_html"] = parsed.get("references_html", "")
         meta["url"] = f"/blog/{meta['date'].year}/{meta['slug']}/"
+        meta["canonical_url"] = build_absolute_url(meta["url"])
+        meta["bibtex"] = generate_post_bibtex(
+            key=f"{meta['slug']}-{meta['date'].year}",
+            author=SITE.get("author", ""),
+            title=meta["title"],
+            url=meta["canonical_url"] or meta["url"],
+        )
         meta["filepath"] = filepath
         posts.append(meta)
 
@@ -534,6 +553,46 @@ def clean_latex(text: str) -> str:
     for latex, char in replacements.items():
         text = text.replace(latex, char)
     return text
+
+
+def build_absolute_url(path: str) -> str:
+    """Build an absolute URL for a site-relative path."""
+    path = str(path or "").strip()
+    if not path:
+        return ""
+    if path.startswith(("http://", "https://")):
+        return path
+
+    base = str(SITE.get("url", "") or "").strip()
+    if not base:
+        return path
+
+    if not path.startswith("/"):
+        path = f"/{path}"
+    return f"{base.rstrip('/')}{path}"
+
+
+def _escape_bibtex_value(value: str) -> str:
+    value = str(value or "")
+    value = re.sub(r"\s+", " ", value).strip()
+    value = value.replace("{", "\\{").replace("}", "\\}")
+    return value
+
+
+def generate_post_bibtex(*, key: str, author: str, title: str, url: str) -> str:
+    """Generate a small BibTeX snippet for a blog post."""
+    key = str(key or "").strip() or "post"
+    key = re.sub(r"[^a-zA-Z0-9:_-]+", "-", key).strip("-")
+    if not key:
+        key = "post"
+
+    return (
+        f"@misc{{{key},\n"
+        f"  author = {{{_escape_bibtex_value(author)}}},\n"
+        f"  title = {{{_escape_bibtex_value(title)}}},\n"
+        f"  url = {{{_escape_bibtex_value(url)}}},\n"
+        "}\n"
+    )
 
 
 def load_publications() -> list:
@@ -620,9 +679,11 @@ def generate_theme_overrides_css() -> str:
     )
 
 
-def build_site():
+def build_site(dist_dir: Path = DIST):
     """Build the static site."""
     click.echo("Building site...")
+
+    reset_caches()
 
     env = Environment(loader=FileSystemLoader(TEMPLATES))
     env.globals["site"] = SITE
@@ -630,9 +691,9 @@ def build_site():
     env.globals["current_year"] = datetime.now().year
     env.globals["favicon_href"] = build_emoji_favicon_href(SITE.get("favicon_emoji"))
 
-    if DIST.exists():
-        shutil.rmtree(DIST)
-    DIST.mkdir()
+    if dist_dir.exists():
+        shutil.rmtree(dist_dir)
+    dist_dir.mkdir(parents=True, exist_ok=True)
 
     posts = load_posts()
     publications = load_publications()
@@ -652,24 +713,24 @@ def build_site():
         latest_posts=posts[:LATEST_POSTS_COUNT],
         selected_publications=[p for p in publications if p["selected"]],
     )
-    (DIST / "index.html").write_text(html)
+    (dist_dir / "index.html").write_text(html)
     click.echo("  Built: index.html")
 
-    (DIST / "blog").mkdir(parents=True)
+    (dist_dir / "blog").mkdir(parents=True)
     template = env.get_template("blog_list.html")
     html = template.render(title="Blog", posts=posts)
-    (DIST / "blog" / "index.html").write_text(html)
+    (dist_dir / "blog" / "index.html").write_text(html)
     click.echo("  Built: blog/index.html")
 
     template = env.get_template("blog_post.html")
     for post in posts:
-        post_dir = DIST / "blog" / str(post["date"].year) / post["slug"]
+        post_dir = dist_dir / "blog" / str(post["date"].year) / post["slug"]
         post_dir.mkdir(parents=True, exist_ok=True)
         html = template.render(title=post["title"], post=post)
         (post_dir / "index.html").write_text(html)
     click.echo(f"  Built: {len(posts)} blog posts")
 
-    (DIST / "publications").mkdir()
+    (dist_dir / "publications").mkdir()
     pub_content = ""
     pub_file = SRC / "publications.md"
     if pub_file.exists():
@@ -681,14 +742,14 @@ def build_site():
         content=pub_content,
         publication_sections=group_publications_by_year(publications),
     )
-    (DIST / "publications" / "index.html").write_text(html)
+    (dist_dir / "publications" / "index.html").write_text(html)
     click.echo("  Built: publications/index.html")
 
-    shutil.copytree(STATIC, DIST / "static")
+    shutil.copytree(STATIC, dist_dir / "static")
 
     theme_overrides_css = generate_theme_overrides_css()
     pygments_css = generate_pygments_css()
-    css_file = DIST / "static" / "css" / "style.css"
+    css_file = dist_dir / "static" / "css" / "style.css"
     with open(css_file, "a") as f:
         f.write(theme_overrides_css)
         f.write("\n\n/* Pygments github-dark syntax highlighting */\n")
@@ -697,12 +758,12 @@ def build_site():
 
     src_assets = SRC / "assets"
     if src_assets.exists():
-        shutil.copytree(src_assets, DIST / "assets")
+        shutil.copytree(src_assets, dist_dir / "assets")
         click.echo("  Built: assets")
 
     click.echo("")
     click.echo(f"Done! Built {len(posts)} posts, {len(publications)} publications")
-    click.echo(f"Output: {DIST}")
+    click.echo(f"Output: {dist_dir}")
 
 
 @click.group()
@@ -725,6 +786,236 @@ def clean():
         click.echo("Cleaned dist/")
     else:
         click.echo("Nothing to clean")
+
+
+def _iter_files_to_watch(
+    roots: list[Path],
+    *,
+    ignore_dirnames: set[str],
+    ignore_suffixes: set[str],
+) -> list[Path]:
+    files: list[Path] = []
+
+    for root in roots:
+        if not root.exists():
+            continue
+        if root.is_file():
+            files.append(root)
+            continue
+
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [
+                d
+                for d in dirnames
+                if d not in ignore_dirnames and not d.startswith(".")
+            ]
+            for filename in filenames:
+                if filename.startswith("."):
+                    continue
+                path = Path(dirpath) / filename
+                if path.suffix in ignore_suffixes:
+                    continue
+                if path.name == ".DS_Store":
+                    continue
+                files.append(path)
+
+    files.sort(key=lambda p: str(p))
+    return files
+
+
+def _snapshot_files(files: list[Path]) -> dict[str, tuple[int, int]]:
+    snapshot: dict[str, tuple[int, int]] = {}
+    for path in files:
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
+            snapshot[str(path)] = (-1, -1)
+            continue
+        snapshot[str(path)] = (stat.st_mtime_ns, stat.st_size)
+    return snapshot
+
+
+def _watch_roots_for_scope(scope: str) -> list[Path]:
+    if scope == "content":
+        roots: list[Path] = []
+        blog_dir = SRC / "blog"
+        if blog_dir.exists():
+            roots.append(blog_dir)
+        index_md = SRC / "index.md"
+        if index_md.exists():
+            roots.append(index_md)
+        publications_md = SRC / "publications.md"
+        if publications_md.exists():
+            roots.append(publications_md)
+        assets_dir = SRC / "assets"
+        if assets_dir.exists():
+            roots.append(assets_dir)
+        if BIBLIOGRAPHY.exists():
+            roots.append(BIBLIOGRAPHY)
+        return roots
+
+    if scope == "all":
+        roots = _watch_roots_for_scope("content")
+        if TEMPLATES.exists():
+            roots.append(TEMPLATES)
+        if STATIC.exists():
+            roots.append(STATIC)
+        return roots
+
+    if scope == "repo":
+        return [ROOT]
+
+    raise click.ClickException(f"Unknown watch scope: {scope!r}")
+
+
+def _atomic_build_dist() -> bool:
+    tmp = ROOT / "dist.__tmp__"
+    old = ROOT / "dist.__old__"
+
+    if tmp.exists():
+        shutil.rmtree(tmp)
+    if old.exists():
+        shutil.rmtree(old)
+
+    try:
+        build_site(tmp)
+    except Exception:
+        if tmp.exists():
+            shutil.rmtree(tmp)
+        raise
+
+    if not tmp.exists():
+        return False
+
+    try:
+        if DIST.exists():
+            DIST.rename(old)
+        tmp.rename(DIST)
+    except Exception:
+        if not DIST.exists() and old.exists():
+            old.rename(DIST)
+        if tmp.exists():
+            shutil.rmtree(tmp)
+        raise
+    else:
+        if old.exists():
+            shutil.rmtree(old)
+    return True
+
+
+@cli.command()
+@click.option("--host", default="127.0.0.1", show_default=True)
+@click.option("--port", type=int, default=8005, show_default=True)
+@click.option(
+    "--watch-scope",
+    type=click.Choice(["content", "all", "repo"], case_sensitive=False),
+    default="content",
+    show_default=True,
+)
+@click.option(
+    "--watch",
+    "extra_watch",
+    multiple=True,
+    type=click.Path(path_type=Path),
+    help="Additional paths to watch (repeatable).",
+)
+@click.option("--poll-interval", type=float, default=0.5, show_default=True)
+@click.option("--debounce", type=float, default=0.2, show_default=True)
+def dev(
+    host: str,
+    port: int,
+    watch_scope: str,
+    extra_watch: tuple[Path, ...],
+    poll_interval: float,
+    debounce: float,
+):
+    """Serve dist/ and rebuild on content changes."""
+    watch_scope = watch_scope.lower().strip()
+    roots = _watch_roots_for_scope(watch_scope) + [p for p in extra_watch]
+    roots = [p.resolve() for p in roots]
+
+    ignore_dirnames = {
+        ".git",
+        ".venv",
+        "dist",
+        "dist.__tmp__",
+        "dist.__old__",
+        "__pycache__",
+    }
+    ignore_suffixes = {".pyc"}
+
+    click.echo(f"Dev mode (scope={watch_scope}):")
+    for root in roots:
+        click.echo(f"  Watching: {root}")
+
+    click.echo("")
+    click.echo("Initial build...")
+    try:
+        _atomic_build_dist()
+    except Exception as exc:
+        if not DIST.exists():
+            raise click.ClickException(
+                f"Initial build failed and {DIST} does not exist: {exc}"
+            ) from exc
+        click.echo(f"Initial build failed; serving existing {DIST}: {exc}")
+
+    handler = partial(SimpleHTTPRequestHandler, directory=str(DIST))
+    httpd = ThreadingHTTPServer((host, port), handler)
+    url = f"http://{host}:{httpd.server_port}"
+    click.echo(f"Serving: {url}")
+    click.echo(f"Directory: {DIST}")
+    click.echo("Press Ctrl-C to stop")
+
+    server_error: list[BaseException] = []
+
+    def run_server():
+        try:
+            httpd.serve_forever(poll_interval=0.25)
+        except BaseException as exc:
+            server_error.append(exc)
+
+    thread = threading.Thread(target=run_server, name="lectern-dev-server", daemon=True)
+    thread.start()
+
+    watched_files = _iter_files_to_watch(
+        roots, ignore_dirnames=ignore_dirnames, ignore_suffixes=ignore_suffixes
+    )
+    previous_snapshot = _snapshot_files(watched_files)
+
+    pending_rebuild = False
+    last_change = 0.0
+
+    try:
+        while True:
+            if server_error:
+                raise click.ClickException(f"Server error: {server_error[0]}")
+
+            watched_files = _iter_files_to_watch(
+                roots, ignore_dirnames=ignore_dirnames, ignore_suffixes=ignore_suffixes
+            )
+            current_snapshot = _snapshot_files(watched_files)
+            if current_snapshot != previous_snapshot:
+                pending_rebuild = True
+                last_change = time.time()
+                previous_snapshot = current_snapshot
+
+            now = time.time()
+            if pending_rebuild and (now - last_change) >= debounce:
+                pending_rebuild = False
+                click.echo("")
+                click.echo("Change detected; rebuilding...")
+                try:
+                    _atomic_build_dist()
+                    click.echo("Rebuild complete.")
+                except Exception as exc:
+                    click.echo(f"Rebuild failed; keeping last good build: {exc}")
+
+            time.sleep(poll_interval)
+    except KeyboardInterrupt:
+        click.echo("\nStopping...")
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
 
 
 if __name__ == "__main__":

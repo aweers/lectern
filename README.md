@@ -38,6 +38,12 @@ Build the site:
 uv run python -m lectern.build build
 ```
 
+Build + serve + rebuild on changes (dev mode):
+
+```bash
+uv run python -m lectern.build dev
+```
+
 Clean build artifacts:
 
 ```bash
