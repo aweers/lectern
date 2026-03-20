@@ -752,6 +752,68 @@ main {
     color: var(--accent);
 }
 
+.bibtex-citation {
+    margin-top: 3rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+}
+
+.bibtex-citation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.bibtex-citation h2 {
+    font-size: 1.1rem;
+    color: var(--text);
+    margin: 0;
+}
+
+.copy-bibtex {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.copy-bibtex:hover {
+    color: var(--text);
+    border-color: var(--text-muted);
+}
+
+.copy-bibtex:active {
+    transform: translateY(1px);
+}
+
+.copy-bibtex.copied {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.bibtex-citation pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    overflow: auto;
+    margin: 0;
+}
+
+.bibtex-citation code {
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
 .references {
     margin-top: 3rem;
     padding-top: 2rem;

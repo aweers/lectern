@@ -16,6 +16,13 @@
         <div class="prose">
             {{ post.content | safe }}
         </div>
+        <section class="bibtex-citation" aria-label="BibTeX citation">
+            <div class="bibtex-citation-header">
+                <h2>BibTeX</h2>
+                <button type="button" class="copy-bibtex" data-copy-target="bibtex-{{ post.slug }}" aria-label="Copy BibTeX">Copy</button>
+            </div>
+            <pre><code id="bibtex-{{ post.slug }}">{{ post.bibtex | e }}</code></pre>
+        </section>
         {% if post.references_html %}
         {{ post.references_html | safe }}
         {% endif %}

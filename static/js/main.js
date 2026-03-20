@@ -132,3 +132,51 @@ if (pubImages.length > 0) {
         }
     });
 }
+
+async function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+}
+
+const copyBibtexButtons = document.querySelectorAll('button.copy-bibtex[data-copy-target]');
+
+if (copyBibtexButtons.length) {
+    copyBibtexButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            const targetId = button.getAttribute('data-copy-target');
+            if (!targetId) return;
+
+            const target = document.getElementById(targetId);
+            if (!target) return;
+
+            const text = target.textContent || '';
+            if (!text.trim()) return;
+
+            try {
+                await copyToClipboard(text);
+                const originalText = button.textContent;
+                button.textContent = 'Copied';
+                button.classList.add('copied');
+                window.setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 1500);
+            } catch {
+                // Ignore clipboard failures silently.
+            }
+        });
+    });
+}
