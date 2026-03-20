@@ -11,7 +11,10 @@
     <div class="post-content">
         <header class="post-header">
             <h1>{{ post.title }}</h1>
-            <p class="post-meta">{{ post.date.strftime('%B %d, %Y') }} &middot; {{ post.reading_time_minutes }} min read</p>
+            <p class="post-meta">
+                {{ post.date.strftime('%B %d, %Y') }} &middot; {{ post.reading_time_minutes }} min read
+                &middot; <a href="{{ post.markdown_url }}">Markdown version</a>
+            </p>
         </header>
         <div class="prose">
             {{ post.content | safe }}

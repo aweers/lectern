@@ -523,6 +523,8 @@ def load_posts() -> list:
         meta["citations"] = parsed.get("citations", [])
         meta["references_html"] = parsed.get("references_html", "")
         meta["url"] = f"/blog/{meta['date'].year}/{meta['slug']}/"
+        meta["markdown"] = content.rstrip() + "\n"
+        meta["markdown_url"] = f"{meta['url']}index.md"
         meta["canonical_url"] = build_absolute_url(meta["url"])
         meta["bibtex"] = generate_post_bibtex(
             key=f"{meta['slug']}-{meta['date'].year}",
@@ -728,6 +730,7 @@ def build_site(dist_dir: Path = DIST):
         post_dir.mkdir(parents=True, exist_ok=True)
         html = template.render(title=post["title"], post=post)
         (post_dir / "index.html").write_text(html)
+        (post_dir / "index.md").write_text(post["markdown"])
     click.echo(f"  Built: {len(posts)} blog posts")
 
     (dist_dir / "publications").mkdir()
