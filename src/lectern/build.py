@@ -13,7 +13,7 @@ from datetime import datetime
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 from urllib.parse import quote
 
 import click
@@ -24,7 +24,14 @@ from markdown.extensions.toc import TocExtension
 from pybtex.database import parse_file as parse_bib
 from pygments.formatters import HtmlFormatter
 
-from lectern.config import LATEST_POSTS_COUNT, MARKDOWN_BOLD_COLORS, NAV, SITE
+from lectern.config import (
+    FOOTER_LINKS,
+    LATEST_POSTS_COUNT,
+    MARKDOWN_BOLD_COLORS,
+    MATHJAX,
+    NAV,
+    SITE,
+)
 
 ROOT = Path(__file__).parent.parent.parent
 SRC = ROOT / "src"
@@ -681,6 +688,82 @@ def generate_theme_overrides_css() -> str:
     )
 
 
+def _resolve_repo_path(path: Union[str, Path]) -> Path:
+    path = Path(path)
+    if path.is_absolute():
+        return path
+    return ROOT / path
+
+
+def get_mathjax_script_url() -> str:
+    """Return the MathJax script URL for the current configuration."""
+    if not is_truthy_flag(MATHJAX.get("enabled", True)):
+        return ""
+
+    entrypoint = str(MATHJAX.get("entrypoint", "tex-mml-chtml.js")).strip()
+    if not entrypoint:
+        entrypoint = "tex-mml-chtml.js"
+
+    if is_truthy_flag(MATHJAX.get("self_host", False)):
+        output = str(MATHJAX.get("local_output", "static/vendor/mathjax")).strip()
+        output = output.strip("/")
+        return f"/{output}/{entrypoint}"
+
+    return str(MATHJAX.get("cdn_url", "")).strip()
+
+
+def copy_mathjax_assets(dist_dir: Path) -> bool:
+    """Copy MathJax files into dist/ when self-hosting is enabled."""
+    if not is_truthy_flag(MATHJAX.get("enabled", True)):
+        return False
+
+    if not is_truthy_flag(MATHJAX.get("self_host", False)):
+        return False
+
+    source = _resolve_repo_path(MATHJAX.get("local_source", "node_modules/mathjax/es5"))
+    output = str(MATHJAX.get("local_output", "static/vendor/mathjax")).strip().strip("/")
+    target = dist_dir / output
+    entrypoint = str(MATHJAX.get("entrypoint", "tex-mml-chtml.js")).strip()
+
+    if not source.exists() or not source.is_dir():
+        raise click.ClickException(
+            "MathJax self-hosting is enabled, but the local source directory does not "
+            f"exist: {source}. Install MathJax with `npm install mathjax` or update "
+            "MATHJAX['local_source'] in src/lectern/config.py."
+        )
+
+    if not (source / entrypoint).exists():
+        raise click.ClickException(
+            "MathJax self-hosting is enabled, but the configured entrypoint was not "
+            f"found: {source / entrypoint}"
+        )
+
+    if target.exists():
+        shutil.rmtree(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, target)
+    return True
+
+
+def build_markdown_page(
+    env: Environment,
+    *,
+    source: Path,
+    output_dir: Path,
+    title: str,
+) -> bool:
+    """Build a standalone markdown page with the generic page template."""
+    if not source.exists():
+        return False
+
+    content = parse_markdown(source.read_text())["html"]
+    template = env.get_template("page.html")
+    html = template.render(title=title, content=content)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "index.html").write_text(html)
+    return True
+
+
 def build_site(dist_dir: Path = DIST):
     """Build the static site."""
     click.echo("Building site...")
@@ -690,8 +773,10 @@ def build_site(dist_dir: Path = DIST):
     env = Environment(loader=FileSystemLoader(TEMPLATES))
     env.globals["site"] = SITE
     env.globals["nav"] = NAV
+    env.globals["footer_links"] = FOOTER_LINKS
     env.globals["current_year"] = datetime.now().year
     env.globals["favicon_href"] = build_emoji_favicon_href(SITE.get("favicon_emoji"))
+    env.globals["mathjax_script_url"] = get_mathjax_script_url()
 
     if dist_dir.exists():
         shutil.rmtree(dist_dir)
@@ -748,7 +833,22 @@ def build_site(dist_dir: Path = DIST):
     (dist_dir / "publications" / "index.html").write_text(html)
     click.echo("  Built: publications/index.html")
 
+    legal_pages = [
+        ("privacy.md", "Privacy", "privacy"),
+        ("impressum.md", "Impressum", "impressum"),
+    ]
+    for filename, title, slug in legal_pages:
+        if build_markdown_page(
+            env,
+            source=SRC / filename,
+            output_dir=dist_dir / slug,
+            title=title,
+        ):
+            click.echo(f"  Built: {slug}/index.html")
+
     shutil.copytree(STATIC, dist_dir / "static")
+    if copy_mathjax_assets(dist_dir):
+        click.echo("  Built: self-hosted MathJax assets")
 
     theme_overrides_css = generate_theme_overrides_css()
     pygments_css = generate_pygments_css()
@@ -850,6 +950,12 @@ def _watch_roots_for_scope(scope: str) -> list[Path]:
         publications_md = SRC / "publications.md"
         if publications_md.exists():
             roots.append(publications_md)
+        privacy_md = SRC / "privacy.md"
+        if privacy_md.exists():
+            roots.append(privacy_md)
+        impressum_md = SRC / "impressum.md"
+        if impressum_md.exists():
+            roots.append(impressum_md)
         assets_dir = SRC / "assets"
         if assets_dir.exists():
             roots.append(assets_dir)

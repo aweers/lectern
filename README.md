@@ -11,6 +11,7 @@ A lightweight static site generator for academic blogs and portfolios. Built wit
 - **Syntax highlighting** - Code blocks with Pygments (GitHub dark theme)
 - **Table of contents** - Automatic TOC generation for blog posts
 - **Publications page** - Display academic publications from BibTeX files
+- **Privacy and Impressum pages** - Footer links and static legal pages for DSGVO/GDPR-oriented sites
 - **Responsive design** - Clean, minimal CSS that works on all devices
 - **Fast builds** - No JavaScript frameworks, just static HTML
 
@@ -69,7 +70,9 @@ lectern/
 │   │   └── config.py     # Site configuration
 │   ├── assets/            # Images and other assets
 │   ├── index.md           # Homepage content
-│   └── publications.md    # Publications page content
+│   ├── publications.md    # Publications page content
+│   ├── privacy.md         # Privacy page content
+│   └── impressum.md       # Impressum page content
 ├── templates/             # Jinja2 HTML templates
 ├── static/                # Static assets (CSS, JS)
 ├── bibliography/          # BibTeX file for citations and publications
@@ -154,6 +157,31 @@ MARKDOWN_BOLD_COLORS = {
     "dark": "#93c5fd",
 }
 ```
+
+The footer links are configured in `FOOTER_LINKS`. By default Lectern links to `/privacy/` and `/impressum/` and builds those pages from `src/privacy.md` and `src/impressum.md`.
+
+## MathJax
+
+Lectern uses MathJax for LaTeX rendering. The default configuration loads MathJax from jsDelivr:
+
+```python
+MATHJAX = {
+    "enabled": True,
+    "self_host": False,
+    "cdn_url": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
+    "local_source": "node_modules/mathjax/es5",
+    "local_output": "static/vendor/mathjax",
+    "entrypoint": "tex-mml-chtml.js",
+}
+```
+
+To self-host MathJax, install or place the MathJax `es5` distribution locally, then set:
+
+```python
+MATHJAX["self_host"] = True
+```
+
+For example, `npm install mathjax` creates `node_modules/mathjax/es5`, which Lectern copies into `dist/static/vendor/mathjax/` during the build. You can also point `local_source` at another local MathJax `es5` directory.
 
 ## Managing Publications
 
