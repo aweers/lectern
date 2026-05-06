@@ -13,7 +13,7 @@ from datetime import datetime
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 from urllib.parse import quote
 
 import click
@@ -688,61 +688,12 @@ def generate_theme_overrides_css() -> str:
     )
 
 
-def _resolve_repo_path(path: Union[str, Path]) -> Path:
-    path = Path(path)
-    if path.is_absolute():
-        return path
-    return ROOT / path
-
-
 def get_mathjax_script_url() -> str:
     """Return the MathJax script URL for the current configuration."""
     if not is_truthy_flag(MATHJAX.get("enabled", True)):
         return ""
 
-    entrypoint = str(MATHJAX.get("entrypoint", "tex-mml-chtml.js")).strip()
-    if not entrypoint:
-        entrypoint = "tex-mml-chtml.js"
-
-    if is_truthy_flag(MATHJAX.get("self_host", False)):
-        output = str(MATHJAX.get("local_output", "static/vendor/mathjax")).strip()
-        output = output.strip("/")
-        return f"/{output}/{entrypoint}"
-
     return str(MATHJAX.get("cdn_url", "")).strip()
-
-
-def copy_mathjax_assets(dist_dir: Path) -> bool:
-    """Copy MathJax files into dist/ when self-hosting is enabled."""
-    if not is_truthy_flag(MATHJAX.get("enabled", True)):
-        return False
-
-    if not is_truthy_flag(MATHJAX.get("self_host", False)):
-        return False
-
-    source = _resolve_repo_path(MATHJAX.get("local_source", "node_modules/mathjax/es5"))
-    output = str(MATHJAX.get("local_output", "static/vendor/mathjax")).strip().strip("/")
-    target = dist_dir / output
-    entrypoint = str(MATHJAX.get("entrypoint", "tex-mml-chtml.js")).strip()
-
-    if not source.exists() or not source.is_dir():
-        raise click.ClickException(
-            "MathJax self-hosting is enabled, but the local source directory does not "
-            f"exist: {source}. Install MathJax with `npm install mathjax` or update "
-            "MATHJAX['local_source'] in src/lectern/config.py."
-        )
-
-    if not (source / entrypoint).exists():
-        raise click.ClickException(
-            "MathJax self-hosting is enabled, but the configured entrypoint was not "
-            f"found: {source / entrypoint}"
-        )
-
-    if target.exists():
-        shutil.rmtree(target)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source, target)
-    return True
 
 
 def build_markdown_page(
@@ -847,8 +798,6 @@ def build_site(dist_dir: Path = DIST):
             click.echo(f"  Built: {slug}/index.html")
 
     shutil.copytree(STATIC, dist_dir / "static")
-    if copy_mathjax_assets(dist_dir):
-        click.echo("  Built: self-hosted MathJax assets")
 
     theme_overrides_css = generate_theme_overrides_css()
     pygments_css = generate_pygments_css()

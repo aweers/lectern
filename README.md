@@ -167,21 +167,9 @@ Lectern uses MathJax for LaTeX rendering. The default configuration loads MathJa
 ```python
 MATHJAX = {
     "enabled": True,
-    "self_host": False,
     "cdn_url": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
-    "local_source": "node_modules/mathjax/es5",
-    "local_output": "static/vendor/mathjax",
-    "entrypoint": "tex-mml-chtml.js",
 }
 ```
-
-To self-host MathJax, install or place the MathJax `es5` distribution locally, then set:
-
-```python
-MATHJAX["self_host"] = True
-```
-
-For example, `npm install mathjax` creates `node_modules/mathjax/es5`, which Lectern copies into `dist/static/vendor/mathjax/` during the build. You can also point `local_source` at another local MathJax `es5` directory.
 
 ## Managing Publications
 

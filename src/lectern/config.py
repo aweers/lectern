@@ -25,16 +25,9 @@ FOOTER_LINKS = [
 LATEST_POSTS_COUNT = 3
 
 # MathJax configuration.
-# Set self_host to True to copy a local MathJax distribution into dist/.
-# Install MathJax with `npm install mathjax` or point local_source at another
-# directory containing the MathJax es5 files.
 MATHJAX = {
     "enabled": True,
-    "self_host": False,
     "cdn_url": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
-    "local_source": "node_modules/mathjax/es5",
-    "local_output": "static/vendor/mathjax",
-    "entrypoint": "tex-mml-chtml.js",
 }
 
 # Markdown <strong> styling by theme.
