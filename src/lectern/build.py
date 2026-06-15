@@ -39,6 +39,7 @@ TEMPLATES = ROOT / "templates"
 STATIC = ROOT / "static"
 BIBLIOGRAPHY = ROOT / "bibliography"
 DIST = ROOT / "dist"
+REDIRECT_TEMPLATES = Path(__file__).parent / "redirect"
 
 _bibliography_cache = None
 
@@ -812,6 +813,15 @@ def build_site(dist_dir: Path = DIST):
     if src_assets.exists():
         shutil.copytree(src_assets, dist_dir / "assets")
         click.echo("  Built: assets")
+
+    redirects_src = SRC / "redirects.txt"
+    if redirects_src.exists():
+        go_dir = dist_dir / "go"
+        go_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REDIRECT_TEMPLATES / "go.php", go_dir / "index.php")
+        shutil.copy2(REDIRECT_TEMPLATES / "stats.php", go_dir / "stats.php")
+        shutil.copy2(redirects_src, go_dir / "redirects.txt")
+        click.echo("  Built: go/ (redirect service)")
 
     click.echo("")
     click.echo(f"Done! Built {len(posts)} posts, {len(publications)} publications")
