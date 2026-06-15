@@ -8,7 +8,7 @@ foreach (file(__DIR__.'/redirects.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_
 }
 if (!isset($map[$slug])) { http_response_code(404); exit('Not found'); }
 
-file_put_contents(__DIR__.'/clicks.log', $slug."\t".date('c')."\n", FILE_APPEND | LOCK_EX);
+file_put_contents(dirname(dirname(__DIR__)).'/clicks.log', $slug."\t".date('c')."\n", FILE_APPEND | LOCK_EX);
 header('Location: '.$map[$slug], true, 302);
 exit;
 ?>

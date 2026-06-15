@@ -1,5 +1,5 @@
 <?php
-$log_file      = __DIR__ . '/clicks.log';
+$log_file      = dirname(dirname(__DIR__)) . '/clicks.log';
 $redirect_file = __DIR__ . '/redirects.txt';
 
 $map = [];
