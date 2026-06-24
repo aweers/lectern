@@ -531,7 +531,6 @@ def load_posts() -> list:
         meta["citations"] = parsed.get("citations", [])
         meta["references_html"] = parsed.get("references_html", "")
         meta["url"] = f"/blog/{meta['date'].year}/{meta['slug']}/"
-        meta["markdown"] = content.rstrip() + "\n"
         meta["markdown_url"] = f"{meta['url']}index.md"
         meta["canonical_url"] = build_absolute_url(meta["url"])
         meta["bibtex"] = generate_post_bibtex(
@@ -540,6 +539,7 @@ def load_posts() -> list:
             title=meta["title"],
             url=meta["canonical_url"] or meta["url"],
         )
+        meta["markdown"] = generate_post_markdown(content, meta["bibtex"])
         meta["filepath"] = filepath
         posts.append(meta)
 
@@ -603,6 +603,16 @@ def generate_post_bibtex(*, key: str, author: str, title: str, url: str) -> str:
         f"  url = {{{_escape_bibtex_value(url)}}},\n"
         "}\n"
     )
+
+
+def generate_post_markdown(content: str, bibtex: str) -> str:
+    """Generate the downloadable markdown version for a blog post."""
+    markdown_content = content.rstrip()
+    bibtex = bibtex.rstrip()
+    if not bibtex:
+        return markdown_content + "\n"
+
+    return f"{markdown_content}\n\n## BibTeX\n\n```bibtex\n{bibtex}\n```\n"
 
 
 def load_publications() -> list:
