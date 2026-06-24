@@ -91,6 +91,9 @@ Example:
 publish: true
 title: My Blog Post Title
 description: Short summary shown on blog index pages
+custom_css:
+  - essay.css
+  - /static/css/charts.css
 ---
 
 # My Blog Post Title
@@ -100,6 +103,12 @@ This is the introduction paragraph.
 ## Section Heading
 
 Your content here...
+
+Raw HTML snippets can be embedded directly in markdown:
+
+<div class="callout">
+  Custom HTML content.
+</div>
 
 ### Math Support
 
@@ -137,7 +146,9 @@ Notes:
 - Posts are discovered from files named `YYYY-MM-DD-slug.md`
 - The date is taken from the filename, not frontmatter
 - `publish` defaults to `false` if omitted
-- Only `publish`, `title`, and `description` are supported frontmatter fields
+- Supported frontmatter fields include `publish`, `title`, `description`, and post-specific stylesheets via `custom_css`, `css`, `stylesheets`, or `stylesheet`
+- Stylesheets can be full URLs, root-relative paths such as `/static/css/post.css`, bare filenames in `static/css/`, or relative `.css` files beside the markdown post; relative files are copied into that post's generated output directory
+- Raw HTML snippets are allowed in markdown files and are rendered as HTML
 
 ## Configuration
 

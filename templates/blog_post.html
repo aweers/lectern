@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block styles %}
+{% for css_file in post.css_files %}
+    <link rel="stylesheet" href="{{ css_file.href | e }}">
+{% endfor %}
+{% endblock %}
+
 {% block content %}
 <article class="post-layout">
     <aside class="toc-sidebar">

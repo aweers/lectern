@@ -40,6 +40,7 @@ STATIC = ROOT / "static"
 BIBLIOGRAPHY = ROOT / "bibliography"
 DIST = ROOT / "dist"
 REDIRECT_TEMPLATES = Path(__file__).parent / "redirect"
+POST_CSS_FRONTMATTER_KEYS = ("custom_css", "css", "stylesheets", "stylesheet")
 
 _bibliography_cache = None
 
@@ -501,6 +502,70 @@ def extract_metadata(filepath: Path, content: str) -> dict:
     }
 
 
+def quote_url_path(path: str) -> str:
+    """Quote a URL path while preserving path separators and common URL syntax."""
+    return quote(path.replace(os.sep, "/"), safe="/:%#?&=@[]!$&'()*+,;~")
+
+
+def normalize_post_css_files(post: frontmatter.Post, filepath: Path) -> list[dict]:
+    """Normalize post-specific CSS frontmatter into link hrefs and copy sources."""
+    css_entries = []
+    for key in POST_CSS_FRONTMATTER_KEYS:
+        value = post.get(key)
+        if value is None:
+            continue
+        if isinstance(value, str):
+            css_entries.append(value)
+        elif isinstance(value, (list, tuple)):
+            css_entries.extend(value)
+        else:
+            click.echo(f"  Ignoring {key} in {filepath.name} (expected string or list)")
+
+    css_files = []
+    seen_hrefs = set()
+    for entry in css_entries:
+        css_path = str(entry).strip()
+        if not css_path:
+            continue
+        if any(char in css_path for char in "\n\r\"'<>"):
+            click.echo(f"  Ignoring unsafe CSS path in {filepath.name}: {css_path!r}")
+            continue
+
+        source = None
+        output_path = None
+        if re.match(r"^https?://", css_path) or css_path.startswith("/"):
+            href = quote_url_path(css_path)
+        else:
+            path = Path(css_path)
+            if path.is_absolute() or ".." in path.parts:
+                click.echo(f"  Ignoring CSS path outside post directory in {filepath.name}: {css_path}")
+                continue
+            if path.suffix.lower() != ".css":
+                click.echo(f"  Ignoring non-CSS stylesheet in {filepath.name}: {css_path}")
+                continue
+
+            local_source = filepath.parent / path
+            if local_source.exists():
+                source = local_source
+                output_path = path
+                href = quote_url_path(css_path)
+            else:
+                href = quote_url_path(f"/static/css/{css_path}")
+
+        if href in seen_hrefs:
+            continue
+        seen_hrefs.add(href)
+        css_files.append(
+            {
+                "href": href,
+                "source": source,
+                "output_path": output_path,
+            }
+        )
+
+    return css_files
+
+
 def load_posts() -> list:
     """Load all blog posts, sorted by date descending."""
     posts = []
@@ -523,6 +588,7 @@ def load_posts() -> list:
 
         meta["title"] = post.get("title", meta["title"])
         meta["description"] = post.get("description", meta["description"])
+        meta["css_files"] = normalize_post_css_files(post, filepath)
 
         parsed = parse_markdown(content, process_cites=True)
         meta["content"] = parsed["html"]
@@ -726,6 +792,19 @@ def build_markdown_page(
     return True
 
 
+def copy_post_css_files(post: dict, post_dir: Path) -> None:
+    """Copy CSS files declared relative to a blog post into that post's output."""
+    for css_file in post.get("css_files", []):
+        source = css_file.get("source")
+        output_path = css_file.get("output_path")
+        if not source or not output_path:
+            continue
+
+        target = post_dir / output_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+
 def build_site(dist_dir: Path = DIST):
     """Build the static site."""
     click.echo("Building site...")
@@ -778,6 +857,7 @@ def build_site(dist_dir: Path = DIST):
         html = template.render(title=post["title"], post=post)
         (post_dir / "index.html").write_text(html)
         (post_dir / "index.md").write_text(post["markdown"])
+        copy_post_css_files(post, post_dir)
     click.echo(f"  Built: {len(posts)} blog posts")
 
     (dist_dir / "publications").mkdir()
